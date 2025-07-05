@@ -5,6 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Water Drop Game</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: sans-serif;
+            background: #e0f7fa;
+        }
+        .game-wrapper {
+            text-align: center;
+            padding: 20px;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background-color: #b3e5fc;
+            overflow: hidden;
+            border: 2px solid #0288d1;
+            margin-top: 20px;
+        }
+        .drop, .obstacle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .drop {
+            background-color: #2196f3;
+        }
+        .obstacle {
+            background-color: red;
+        }
+        #feedback {
+            font-size: 20px;
+            margin: 10px;
+            height: 30px;
+        }
+    </style>
 </head>
 <body>
     <div class="game-wrapper">
@@ -14,12 +56,119 @@
             <div class="score">Score: <span id="score">0</span></div>
             <div class="timer">Time: <span id="time">30</span>s</div>
             <button id="start-btn">Start Game</button>
+            <button id="reset-btn">Reset</button>
         </div>
-        
-        <div id="game-container">
-        </div>
+        <div id="feedback"></div>
+        <div id="game-container"></div>
+        <canvas id="confetti-canvas"></canvas>
     </div>
-    
-    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const feedback = document.getElementById('feedback');
+        const startBtn = document.getElementById('start-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        let score = 0;
+        let timeLeft = 30;
+        let gameInterval;
+        let timerInterval;
+
+        function getRandomX() {
+            return Math.floor(Math.random() * (gameContainer.clientWidth - 70));
+        }
+
+        function spawnDrop() {
+            const drop = document.createElement('div');
+            drop.classList.add('drop');
+            drop.style.left = `${getRandomX()}px`;
+            drop.style.top = '0px';
+            gameContainer.appendChild(drop);
+
+            drop.addEventListener('click', (e) => {
+                e.stopPropagation();
+                score++;
+                scoreEl.textContent = score;
+                drop.remove();
+                feedback.textContent = "+1!";
+            });
+
+            animateDrop(drop);
+        }
+
+        function spawnObstacle() {
+            const obstacle = document.createElement('div');
+            obstacle.classList.add('obstacle');
+            obstacle.style.left = `${getRandomX()}px`;
+            obstacle.style.top = '0px';
+            gameContainer.appendChild(obstacle);
+
+            obstacle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                score--;
+                scoreEl.textContent = score;
+                obstacle.remove();
+                feedback.textContent = "-1!";
+            });
+
+            animateDrop(obstacle);
+        }
+
+        function animateDrop(element) {
+            let pos = 0;
+            const fallSpeed = 5;
+            const interval = setInterval(() => {
+                if (pos >= gameContainer.clientHeight - 70) {
+                    element.remove();
+                    clearInterval(interval);
+                } else {
+                    pos += fallSpeed;
+                    element.style.top = `${pos}px`;
+                }
+            }, 30);
+        }
+
+        function startGame() {
+            resetGame();
+            gameInterval = setInterval(() => {
+                spawnDrop();
+                if (Math.random() < 0.3) spawnObstacle();
+            }, 600);
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeEl.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(gameInterval);
+                    clearInterval(timerInterval);
+                    feedback.textContent = score >= 10 ? 'You Win! 🎉' : 'Game Over!';
+
+                    if (score >= 10) {
+                        confetti({
+                            particleCount: 200,
+                            spread: 70,
+                            origin: { y: 0.6 }
+                        });
+                    }
+                }
+            }, 1000);
+        }
+
+        function resetGame() {
+            score = 0;
+            timeLeft = 30;
+            scoreEl.textContent = score;
+            timeEl.textContent = timeLeft;
+            feedback.textContent = '';
+            clearInterval(gameInterval);
+            clearInterval(timerInterval);
+            gameContainer.innerHTML = '';
+        }
+
+        startBtn.addEventListener('click', startGame);
+        resetBtn.addEventListener('click', resetGame);
+    </script>
 </body>
 </html>
